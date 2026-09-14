@@ -1,3 +1,4 @@
-streamlit
-pypdf
-python-docx
+streamlit>=1.42,<2
+pypdf>=5,<6
+python-docx>=1.1,<2
+anthropic>=0.60,<1
