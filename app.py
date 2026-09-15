@@ -32,7 +32,22 @@ st.set_page_config(
 def require_google_login():
     """Authentifie l'utilisateur et vérifie son autorisation."""
 
-    if not st.user.is_logged_in:
+    auth_config = st.secrets.get("auth", {})
+    google_config = auth_config.get("google", {})
+
+    if not auth_config or not google_config:
+        st.error(
+            "La configuration Google OIDC est absente. "
+            "Ajoutez les sections [auth] et [auth.google] "
+            "dans Streamlit Cloud > Settings > Secrets."
+        )
+        st.stop()
+
+    is_logged_in = bool(
+        getattr(st.user, "is_logged_in", False)
+    )
+
+    if not is_logged_in:
         st.title("Connexion requise")
         st.write(
             "Connectez-vous avec votre compte Google autorisé."
