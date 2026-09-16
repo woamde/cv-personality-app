@@ -77,33 +77,33 @@ def require_google_login():
 # Questionnaire professionnel original
 # ---------------------------------------------------------
 
-# Ce questionnaire est un autodiagnostic indicatif, non un test psychométrique
-# certifié et non un outil de diagnostic médical ou de sélection automatisée.
-QUESTIONNAIRE = [
-    ("Organisation et fiabilité", "Je planifie mes tâches et je respecte les échéances annoncées."),
-    ("Organisation et fiabilité", "Je vérifie les éléments importants avant de livrer mon travail."),
-    ("Organisation et fiabilité", "Je sais prioriser lorsque plusieurs demandes arrivent en même temps."),
-    ("Organisation et fiabilité", "Je documente suffisamment mon travail pour qu'une autre personne puisse le reprendre."),
-    ("Adaptation et apprentissage", "Je m'adapte rapidement lorsqu'une priorité ou une méthode change."),
-    ("Adaptation et apprentissage", "Je cherche activement à comprendre les outils ou sujets que je ne maîtrise pas encore."),
-    ("Adaptation et apprentissage", "Je transforme un retour critique en action d'amélioration."),
-    ("Adaptation et apprentissage", "Je reste efficace lorsque les informations disponibles sont incomplètes."),
-    ("Coopération et communication", "J'écoute les besoins des autres avant de proposer une solution."),
-    ("Coopération et communication", "Je reformule les points importants pour éviter les malentendus."),
-    ("Coopération et communication", "Je partage les informations utiles avec les personnes concernées."),
-    ("Coopération et communication", "Je sais exprimer un désaccord de manière constructive."),
-    ("Initiative et résolution", "Je propose des solutions plutôt que de signaler uniquement les problèmes."),
-    ("Initiative et résolution", "Je prends une décision dans mon périmètre lorsque cela est nécessaire."),
-    ("Initiative et résolution", "Je demande de l'aide assez tôt lorsqu'un risque peut affecter le résultat."),
-    ("Initiative et résolution", "Je garde mon objectif en vue même lorsqu'un obstacle survient."),
-    ("Rigueur et qualité", "Je m'appuie sur des faits et des critères explicites pour travailler."),
-    ("Rigueur et qualité", "Je repère les incohérences ou les risques avant qu'ils ne deviennent critiques."),
-    ("Rigueur et qualité", "Je respecte les consignes, les règles et la confidentialité des informations."),
-    ("Rigueur et qualité", "Je cherche un équilibre entre rapidité, qualité et attentes du destinataire."),
-    ("Leadership et influence", "Je peux mobiliser un groupe autour d'un objectif commun."),
-    ("Leadership et influence", "Je prends volontiers la responsabilité d'un sujet ou d'une décision."),
-    ("Leadership et influence", "Je donne des consignes ou des retours de façon claire et respectueuse."),
-    ("Leadership et influence", "Je sais faire avancer un projet sans disposer d'une autorité hiérarchique directe."),
+# Questionnaire DISC original d'orientation professionnelle. Il ne reproduit
+# aucun test propriétaire et ne constitue pas un test psychométrique certifié.
+DISC_ITEMS = [
+    ("D — Dominance", "Je prends rapidement position lorsque l'objectif est clair."),
+    ("D — Dominance", "Je suis stimulé par les défis et les résultats mesurables."),
+    ("D — Dominance", "Je préfère décider et agir plutôt qu'attendre une solution parfaite."),
+    ("D — Dominance", "Je peux défendre fermement une priorité face à des objections."),
+    ("D — Dominance", "Je me sens à l'aise pour prendre la responsabilité d'un sujet difficile."),
+    ("D — Dominance", "Je transforme volontiers un problème en plan d'action concret."),
+    ("I — Influence", "Je crée facilement un contact positif avec de nouvelles personnes."),
+    ("I — Influence", "Je convaincs plus efficacement par le dialogue et l'enthousiasme."),
+    ("I — Influence", "Je prends plaisir à présenter une idée devant un groupe."),
+    ("I — Influence", "Je contribue à maintenir une dynamique motivante dans une équipe."),
+    ("I — Influence", "Je développe naturellement un réseau de relations professionnelles."),
+    ("I — Influence", "Je sais adapter mon discours à différents interlocuteurs."),
+    ("S — Stabilité", "Je reste fiable et constant même lorsque la charge augmente."),
+    ("S — Stabilité", "Je prends le temps d'écouter avant de proposer une solution."),
+    ("S — Stabilité", "J'apprécie la coopération et la continuité dans les relations de travail."),
+    ("S — Stabilité", "J'accompagne volontiers un collègue qui apprend une nouvelle méthode."),
+    ("S — Stabilité", "Je contribue à apaiser les tensions et à rechercher un accord."),
+    ("S — Stabilité", "Je m'organise pour maintenir une qualité régulière dans la durée."),
+    ("C — Conformité", "Je vérifie les faits, les critères et les détails avant de conclure."),
+    ("C — Conformité", "Je préfère disposer d'informations fiables avant de recommander une action."),
+    ("C — Conformité", "Je respecte attentivement les règles, procédures et exigences qualité."),
+    ("C — Conformité", "Je repère les incohérences et les risques dans un document ou un processus."),
+    ("C — Conformité", "Je structure mon travail pour qu'il soit traçable et vérifiable."),
+    ("C — Conformité", "Je recherche une solution précise, argumentée et durable."),
 ]
 
 REPONSES = [
@@ -116,20 +116,20 @@ REPONSES = [
 
 
 def render_personality_test():
-    """Affiche le test et renvoie les scores une fois les 24 réponses données."""
+    """Affiche le questionnaire DISC avant d'autoriser CV et annonce."""
 
-    st.subheader("1. Autodiagnostic professionnel")
+    st.subheader("1. Questionnaire DISC professionnel")
     st.info(
-        "Ce questionnaire est indicatif : il aide à identifier des points forts "
-        "à valoriser, mais ne constitue ni un diagnostic psychologique ni un test "
-        "psychométrique certifié. Répondez selon vos comportements habituels au travail."
+        "Ce questionnaire DISC est une orientation professionnelle indicative. "
+        "Il ne constitue ni un diagnostic psychologique, ni un test certifié, ni "
+        "un outil de sélection. Répondez selon vos comportements habituels au travail."
     )
 
     with st.form("professional_personality_test"):
         answers = {}
         current_dimension = None
 
-        for index, (dimension, statement) in enumerate(QUESTIONNAIRE):
+        for index, (dimension, statement) in enumerate(DISC_ITEMS):
             if dimension != current_dimension:
                 st.markdown(f"**{dimension}**")
                 current_dimension = dimension
@@ -151,7 +151,7 @@ def render_personality_test():
         return None
 
     scores = {}
-    for index, (dimension, _) in enumerate(QUESTIONNAIRE):
+    for index, (dimension, _) in enumerate(DISC_ITEMS):
         value = int(answers[index][0])
         scores.setdefault(dimension, []).append(value)
 
@@ -175,7 +175,7 @@ def profile_label(score):
 def render_profile_summary(averages):
     """Affiche et résume les résultats sans surinterprétation."""
 
-    st.subheader("Votre profil professionnel indicatif")
+    st.subheader("Votre profil DISC professionnel indicatif")
     st.caption("Échelle : 1 = faible adhésion déclarée, 5 = forte adhésion déclarée.")
 
     rows = []
@@ -242,10 +242,11 @@ def build_prompt(profile_summary, cv_text, job_offer):
     return f"""
 Tu es un expert RH et spécialiste du recrutement.
 
-PROFIL PROFESSIONNEL AUTO-DÉCLARÉ — INDICATIF :
+PROFIL DISC PROFESSIONNEL AUTO-DÉCLARÉ — INDICATIF :
 {profile_summary}
 
-Utilise ce profil uniquement pour suggérer des formulations et des exemples.
+Utilise ce profil DISC uniquement pour suggérer des formulations, des exemples
+et un angle de présentation cohérent avec le poste ciblé.
 Ne présente pas les scores comme une vérité psychologique, ne pose aucun diagnostic
 et ne déduis aucune information sensible. N'écarte jamais une candidature sur la
 seule base de ce questionnaire.
