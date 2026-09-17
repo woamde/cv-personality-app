@@ -27,52 +27,40 @@ st.set_page_config(
 # ---------------------------------------------------------
 
 def require_google_login():
-    """Authentifie l'utilisateur et vérifie son autorisation."""
+    """Authentifie tout utilisateur disposant d'un compte Google."""
 
-    auth_config = st.secrets.get("auth", {})
-    google_config = auth_config.get("google", {})
-
-    if not auth_config or not google_config:
-        st.error(
-            "La configuration Google OIDC est absente. "
-            "Ajoutez [auth] et [auth.google] dans les Secrets Cloud."
-        )
-        st.stop()
-
-    if not bool(getattr(st.user, "is_logged_in", False)):
+    if not getattr(st.user, "is_logged_in", False):
         st.title("Connexion requise")
-        st.write("Connectez-vous avec votre compte Google autorisé.")
+        st.write(
+            "Connectez-vous avec votre compte Google pour utiliser "
+            "l'adaptateur de CV."
+        )
+
         st.button(
             "Se connecter avec Google",
             on_click=st.login,
             args=("google",),
             use_container_width=True,
         )
+
         st.stop()
 
     user = dict(st.user)
-    email = str(user.get("email", "")).lower().strip()
-    security_config = st.secrets.get("security", {})
+    email = str(user.get("email", "")).strip().lower()
 
-    allowed_emails = {
-        str(value).lower().strip()
-        for value in security_config.get("allowed_emails", [])
-    }
-    allowed_domains = {
-        str(value).lower().strip()
-        for value in security_config.get("allowed_domains", [])
-    }
-    email_domain = email.rsplit("@", 1)[1] if "@" in email else ""
-
-    if email not in allowed_emails and email_domain not in allowed_domains:
-        log.warning("unauthorized_google_user")
-        st.error("Ce compte Google n'est pas autorisé à utiliser cette application.")
-        st.button("Se déconnecter", on_click=st.logout)
+    if not email:
+        st.error(
+            "Google n'a pas fourni d'adresse email vérifiée."
+        )
+        st.logout()
         st.stop()
 
+    st.sidebar.success(f"Connecté : {email}")
+
+    if st.sidebar.button("Se déconnecter"):
+        st.logout()
+
     return user
-
-
 # ---------------------------------------------------------
 # Questionnaire professionnel original
 # ---------------------------------------------------------
