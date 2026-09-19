@@ -114,6 +114,7 @@ def logout_user() -> None:
         st.session_state.pop("supabase_user", None)
         st.session_state.pop("supabase_session", None)
         st.session_state.pop("personality_scores", None)
+        st.session_state.pop("disc_questionnaire_version", None)
         st.session_state.pop("privacy_consent", None)
         st.rerun()
 
@@ -296,6 +297,8 @@ def render_supabase_auth() -> dict[str, Any]:
 # Questionnaire DISC original indicatif
 # ---------------------------------------------------------
 
+DISC_QUESTIONNAIRE_VERSION = "disc-32-v1"
+
 DISC_ITEMS = [
     ("D — Dominance", "Je prends rapidement position lorsque l'objectif est clair."),
     ("D — Dominance", "Je suis stimulé par les défis et les résultats mesurables."),
@@ -303,25 +306,64 @@ DISC_ITEMS = [
     ("D — Dominance", "Je peux défendre fermement une priorité face à des objections."),
     ("D — Dominance", "Je me sens à l'aise pour prendre la responsabilité d'un sujet difficile."),
     ("D — Dominance", "Je transforme volontiers un problème en plan d'action concret."),
+    ("D — Dominance", "Je suis à l'aise pour arbitrer entre plusieurs priorités."),
+    ("D — Dominance", "Je cherche à faire progresser rapidement une situation bloquée."),
     ("I — Influence", "Je crée facilement un contact positif avec de nouvelles personnes."),
     ("I — Influence", "Je convaincs plus efficacement par le dialogue et l'enthousiasme."),
     ("I — Influence", "Je prends plaisir à présenter une idée devant un groupe."),
     ("I — Influence", "Je contribue à maintenir une dynamique motivante dans une équipe."),
     ("I — Influence", "Je développe naturellement un réseau de relations professionnelles."),
     ("I — Influence", "Je sais adapter mon discours à différents interlocuteurs."),
+    ("I — Influence", "Je sais donner envie de participer à un projet."),
+    ("I — Influence", "Je prends facilement la parole pour clarifier une situation."),
     ("S — Stabilité", "Je reste fiable et constant même lorsque la charge augmente."),
     ("S — Stabilité", "Je prends le temps d'écouter avant de proposer une solution."),
     ("S — Stabilité", "J'apprécie la coopération et la continuité dans les relations de travail."),
     ("S — Stabilité", "J'accompagne volontiers un collègue qui apprend une nouvelle méthode."),
     ("S — Stabilité", "Je contribue à apaiser les tensions et à rechercher un accord."),
     ("S — Stabilité", "Je m'organise pour maintenir une qualité régulière dans la durée."),
+    ("S — Stabilité", "Je préfère construire une relation de confiance progressivement."),
+    ("S — Stabilité", "Je reste disponible et patient lorsqu'une personne a besoin d'aide."),
     ("C — Conformité", "Je vérifie les faits, les critères et les détails avant de conclure."),
     ("C — Conformité", "Je préfère disposer d'informations fiables avant de recommander une action."),
     ("C — Conformité", "Je respecte attentivement les règles, procédures et exigences qualité."),
     ("C — Conformité", "Je repère les incohérences et les risques dans un document ou un processus."),
     ("C — Conformité", "Je structure mon travail pour qu'il soit traçable et vérifiable."),
     ("C — Conformité", "Je recherche une solution précise, argumentée et durable."),
+    ("C — Conformité", "Je compare plusieurs options avant de recommander une solution."),
+    ("C — Conformité", "Je documente mes décisions pour faciliter leur suivi."),
 ]
+
+DISC_DETAILS = {
+    "D — Dominance": {
+        "orientation": "Action, objectifs, décision et défis.",
+        "forces": "Initiative, arbitrage, prise de responsabilité et progression d'un sujet.",
+        "vigilance": "La rapidité peut être perçue comme de la précipitation sans faits vérifiables.",
+        "communication": "Aller à l'essentiel et préciser objectif, périmètre et résultat.",
+        "cv": "Projets pilotés, décisions prises et résultats réellement mesurés.",
+    },
+    "I — Influence": {
+        "orientation": "Relation, communication, persuasion et dynamique collective.",
+        "forces": "Présentation, création de liens, mobilisation et adaptation du discours.",
+        "vigilance": "Illustrer l'aisance relationnelle par des situations professionnelles.",
+        "communication": "Employer un langage accessible et des exemples concrets d'interaction.",
+        "cv": "Relation client, présentations, coordination et partenariats démontrés.",
+    },
+    "S — Stabilité": {
+        "orientation": "Coopération, écoute, continuité et fiabilité.",
+        "forces": "Constance, patience, accompagnement et maintien de la qualité.",
+        "vigilance": "Faire aussi apparaître les initiatives, décisions et résultats obtenus.",
+        "communication": "Expliquer le contexte, les étapes et la continuité.",
+        "cv": "Accompagnement, travail d'équipe et améliorations maintenues dans le temps.",
+    },
+    "C — Conformité": {
+        "orientation": "Rigueur, analyse, qualité, méthodes et maîtrise des risques.",
+        "forces": "Vérification, précision, structuration, traçabilité et contrôle.",
+        "vigilance": "Ne pas transformer la rigueur en compétence technique non prouvée.",
+        "communication": "Présenter les critères, les faits, la méthode et les preuves.",
+        "cv": "Procédures, contrôles qualité, analyses et résultats documentés.",
+    },
+}
 
 REPONSES = [
     "1 — Pas du tout d'accord",
@@ -350,10 +392,11 @@ avant toute mise en production professionnelle.
 
 
 def render_personality_test():
-    st.subheader("1. Questionnaire DISC professionnel")
+    st.subheader("1. Questionnaire DISC professionnel — 32 affirmations")
     st.info(
-        "Questionnaire d'orientation professionnelle indicatif : il ne constitue ni "
-        "un diagnostic, ni un test certifié, ni un outil de sélection."
+        "Répondez aux 32 affirmations selon vos comportements habituels au travail. "
+        "Cette auto-évaluation est indicative : elle ne constitue ni un diagnostic, "
+        "ni un test certifié, ni un outil de sélection."
     )
 
     with st.form("professional_personality_test"):
@@ -366,6 +409,7 @@ def render_personality_test():
             answers[index] = st.radio(
                 f"{index + 1}. {statement}",
                 REPONSES,
+                index=None,
                 key=f"personality_answer_{index}",
             )
 
@@ -375,7 +419,18 @@ def render_personality_test():
             use_container_width=True,
         )
 
-    return calculate_disc_scores(answers) if submitted else None
+    if not submitted:
+        return None
+
+    missing = [index + 1 for index, value in answers.items() if value is None]
+    if missing:
+        st.error(
+            f"Questionnaire incomplet : {len(missing)} réponse(s) manquante(s). "
+            "Répondez à toutes les affirmations avant de continuer."
+        )
+        return None
+
+    return calculate_disc_scores(answers)
 
 
 def calculate_disc_scores(answers):
@@ -400,8 +455,30 @@ def profile_label(score):
 
 
 def render_profile_summary(averages):
-    st.subheader("Votre profil DISC professionnel indicatif")
+    ranking = sorted(averages, key=averages.get, reverse=True)
+    primary = ranking[0]
+    secondary = ranking[1]
+    gap = averages[primary] - averages[secondary]
+
+    st.subheader("Résultats DISC détaillés")
     st.caption("Échelle : 1 = faible adhésion déclarée, 5 = forte adhésion déclarée.")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Dimension dominante", primary)
+    col2.metric("Dimension secondaire", secondary)
+    col3.metric("Écart entre les deux", f"{gap:.2f}")
+
+    if gap < 0.25:
+        st.info(
+            f"Profil relativement équilibré entre **{primary}** et **{secondary}**. "
+            "Votre présentation professionnelle ne doit pas être réduite à une seule lettre."
+        )
+    else:
+        st.info(
+            f"**{primary}** ressort comme tendance principale, complétée par "
+            f"**{secondary}**. Le contexte professionnel peut modifier leur expression."
+        )
+
     st.table(
         [
             {
@@ -409,20 +486,43 @@ def render_profile_summary(averages):
                 "Score / 5": score,
                 "Lecture indicative": profile_label(score),
             }
-            for dimension, score in averages.items()
+            for dimension, score in sorted(
+                averages.items(), key=lambda item: item[1], reverse=True
+            )
         ]
     )
-    strengths = [name for name, score in averages.items() if score >= 3.5]
-    development = [name for name, score in averages.items() if score < 3.5]
-    st.write("**Dimensions à valoriser :** " + (", ".join(strengths) or "à préciser avec des exemples concrets."))
-    st.write("**Dimensions à illustrer ou développer :** " + (", ".join(development) or "aucune dimension prioritaire identifiée."))
+
+    for dimension in ranking:
+        details = DISC_DETAILS[dimension]
+        with st.expander(
+            f"{dimension} — {averages[dimension]}/5 — {profile_label(averages[dimension])}",
+            expanded=dimension in (primary, secondary),
+        ):
+            st.write(f"**Orientation :** {details['orientation']}")
+            st.write(f"**Forces possibles :** {details['forces']}")
+            st.write(f"**Point de vigilance :** {details['vigilance']}")
+            st.write(f"**Style de communication :** {details['communication']}")
+            st.write(f"**Angle CV possible :** {details['cv']}")
+
+    st.warning(
+        "Une préférence déclarée ne devient une compétence que si une expérience, "
+        "une action ou un résultat réel du CV la démontre."
+    )
 
 
 def profile_for_prompt(averages):
-    return "\n".join(
-        f"- {dimension}: {score}/5 ({profile_label(score)})"
-        for dimension, score in averages.items()
+    ranking = sorted(averages, key=averages.get, reverse=True)
+    header = (
+        f"Dominante indicative : {ranking[0]} ; "
+        f"dimension secondaire : {ranking[1]}."
     )
+    rows = "\n".join(
+        f"- {dimension}: {score}/5 ({profile_label(score)})"
+        for dimension, score in sorted(
+            averages.items(), key=lambda item: item[1], reverse=True
+        )
+    )
+    return f"{header}\n{rows}"
 
 
 # ---------------------------------------------------------
@@ -560,16 +660,41 @@ if not consent:
 if "personality_scores" not in st.session_state:
     st.session_state.personality_scores = None
 
-scores = render_personality_test()
-if scores is not None:
-    st.session_state.personality_scores = scores
+if st.session_state.get("disc_questionnaire_version") != DISC_QUESTIONNAIRE_VERSION:
+    st.session_state.personality_scores = None
+    st.session_state.disc_questionnaire_version = DISC_QUESTIONNAIRE_VERSION
 
 if st.session_state.personality_scores is None:
-    st.warning("Terminez l'autodiagnostic pour déverrouiller l'analyse CV/offre.")
-    st.stop()
+    scores = render_personality_test()
+    if scores is not None:
+        st.session_state.personality_scores = scores
+        st.session_state.disc_questionnaire_version = DISC_QUESTIONNAIRE_VERSION
+        st.rerun()
+    else:
+        st.warning(
+            "Les outils CV et annonce seront affichés après la validation des "
+            "32 réponses."
+        )
+        st.stop()
 
 render_profile_summary(st.session_state.personality_scores)
+
+col_reset, col_status = st.columns([1, 2])
+with col_reset:
+    if st.button(
+        "Repasser le questionnaire DISC",
+        key="reset_disc_button",
+        use_container_width=True,
+    ):
+        st.session_state.personality_scores = None
+        for index in range(len(DISC_ITEMS)):
+            st.session_state.pop(f"personality_answer_{index}", None)
+        st.rerun()
+with col_status:
+    st.success("Profil enregistré : les outils CV et annonce sont déverrouillés.")
+
 st.divider()
+st.header("Outils d'adaptation de candidature")
 
 col1, col2 = st.columns(2)
 with col1:
