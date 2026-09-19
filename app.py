@@ -48,6 +48,27 @@ def get_supabase_client() -> Client:
     return create_client(url, anon_key)
 
 
+@st.cache_resource
+def get_supabase_admin_client() -> Client:
+    """Client serveur réservé à la suppression du compte courant.
+
+    La clé service_role ne doit jamais être envoyée au navigateur, affichée ou
+    placée dans GitHub. Elle reste uniquement dans Streamlit Secrets.
+    """
+
+    config = st.secrets.get("supabase", {})
+    url = str(config.get("url", "")).strip()
+    service_role_key = str(config.get("service_role_key", "")).strip()
+
+    if not url or not service_role_key:
+        raise RuntimeError(
+            "La suppression de compte nécessite supabase.service_role_key "
+            "dans Streamlit Secrets."
+        )
+
+    return create_client(url, service_role_key)
+
+
 def as_dict(value: Any) -> dict[str, Any]:
     """Convertit les objets Supabase en dictionnaire sans dépendre d'une version."""
 
@@ -97,16 +118,71 @@ def logout_user() -> None:
         st.rerun()
 
 
+def delete_current_account(user_id: str) -> None:
+    """Supprime définitivement le compte Auth Supabase courant."""
+
+    if not user_id:
+        raise ValueError("Identifiant utilisateur absent.")
+
+    get_supabase_admin_client().auth.admin.delete_user(user_id)
+
+    # Effacer immédiatement les données locales de session après suppression.
+    st.session_state.clear()
+    st.rerun()
+
+
+def render_account_controls(current_user: dict[str, Any]) -> None:
+    """Affiche déconnexion et suppression définitive du compte."""
+
+    email = str(current_user.get("email", "")).strip().lower()
+    user_id = str(current_user.get("id", "")).strip()
+
+    with st.sidebar:
+        st.success(f"Connecté : {email}")
+
+        if st.button("Se déconnecter", key="logout_sidebar"):
+            logout_user()
+
+        with st.expander("Supprimer mon compte", expanded=False):
+            st.warning(
+                "Cette action est définitive : elle supprime le compte Supabase "
+                "et déconnecte cette session."
+            )
+            confirm_delete = st.checkbox(
+                "Je comprends que la suppression est définitive.",
+                key="confirm_account_deletion",
+            )
+            typed_email = st.text_input(
+                "Saisissez à nouveau votre email pour confirmer",
+                key="delete_email_confirmation",
+            )
+
+            if st.button(
+                "Supprimer définitivement mon compte",
+                key="delete_account_button",
+                type="secondary",
+            ):
+                if not confirm_delete or typed_email.strip().lower() != email:
+                    st.error(
+                        "Cochez la confirmation et saisissez exactement votre email."
+                    )
+                else:
+                    try:
+                        delete_current_account(user_id)
+                    except Exception:
+                        log.exception("supabase_account_deletion_failed")
+                        st.error(
+                            "La suppression n'a pas abouti. Vérifiez que "
+                            "service_role_key est configurée dans Streamlit Secrets."
+                        )
+
+
 def render_supabase_auth() -> dict[str, Any]:
     """Affiche inscription/connexion et retourne l'utilisateur connecté."""
 
     current_user = st.session_state.get("supabase_user")
     if current_user:
-        email = str(current_user.get("email", "")).strip().lower()
-        with st.sidebar:
-            st.success(f"Connecté : {email}")
-            if st.button("Se déconnecter", key="logout_sidebar"):
-                logout_user()
+        render_account_controls(current_user)
         return current_user
 
     st.title("Accès à l'adaptateur de CV")
